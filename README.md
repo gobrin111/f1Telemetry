@@ -177,3 +177,19 @@ the existing run when its source import and configuration are unchanged. Use
 The eligibility order, comparison groups, weather alignment, and feature
 definitions are documented in the
 [lap feature pipeline](docs/FEATURE_PIPELINE.md).
+
+## Analyze unusual laps
+
+Run both versioned detectors against the latest completed feature run:
+
+```bash
+docker compose exec worker f1-analyze 2024-round-01-race
+```
+
+Use `--model robust` or `--model isolation_forest` to run one detector, and
+`--feature-run-id ID` to select an exact feature set. Every eligible lap gets a
+normalized score; excluded laps retain their feature-pipeline reason. Repeating
+an unchanged analysis returns the existing model run, while `--force` rebuilds
+that run in place. Scoring, explanations, severity thresholds, evaluation, and
+limitations are documented in
+[anomaly detection](docs/ANOMALY_DETECTION.md).

@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 
 FEATURE_SCHEMA_VERSION = "lap-features-v1"
-PIPELINE_VERSION = "1.1.0"
+PIPELINE_VERSION = "1.2.0"
 
 RAW_FEATURE_NAMES = (
     "lap_time_seconds",
@@ -411,18 +411,23 @@ def _feature_payload(
     raw = {name: _number(row.get(name)) for name in RAW_FEATURE_NAMES}
     deltas: dict[str, float | None] = {}
     normalized: dict[str, float | None] = {}
+    baselines: dict[str, float | None] = {}
+    scales: dict[str, float | None] = {}
     for feature_name in RAW_FEATURE_NAMES:
         current = raw[feature_name]
         historical = np.array([item[feature_name] for item in history], dtype="float64")
         if current is None or historical.size == 0:
             normalized[f"{feature_name}_robust_z"] = None
+            baselines[feature_name] = None
+            scales[feature_name] = None
             if feature_name in TIMING_FEATURES:
                 deltas[f"{feature_name}_delta"] = None
             continue
         median = float(np.median(historical))
-        normalized[f"{feature_name}_robust_z"] = (current - median) / _robust_scale(
-            historical, feature_name
-        )
+        scale = _robust_scale(historical, feature_name)
+        baselines[feature_name] = median
+        scales[feature_name] = scale
+        normalized[f"{feature_name}_robust_z"] = (current - median) / scale
         if feature_name in TIMING_FEATURES:
             deltas[f"{feature_name}_delta"] = current - median
 
@@ -451,6 +456,8 @@ def _feature_payload(
     }
     payload = {
         "raw": raw,
+        "baselines": baselines,
+        "scales": scales,
         "deltas": deltas,
         "normalized": normalized,
         "context": context,

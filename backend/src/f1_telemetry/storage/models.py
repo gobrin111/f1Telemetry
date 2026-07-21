@@ -416,6 +416,13 @@ class ModelRun(TimestampMixin, Base):
 
     __tablename__ = "model_runs"
     __table_args__ = (
+        UniqueConstraint(
+            "feature_run_id",
+            "model_name",
+            "model_version",
+            "config_hash",
+            name="model_run_feature_config",
+        ),
         CheckConstraint(
             "status IN ('queued', 'running', 'completed', 'failed')",
             name="valid_status",
@@ -434,8 +441,12 @@ class ModelRun(TimestampMixin, Base):
     model_name: Mapped[str] = mapped_column(String(100), nullable=False)
     model_version: Mapped[str] = mapped_column(String(50), nullable=False)
     feature_schema_version: Mapped[str] = mapped_column(String(50), nullable=False)
+    config_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     parameters: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    metrics: Mapped[dict[str, Any] | None] = mapped_column(JSON)
     status: Mapped[str] = mapped_column(String(20), nullable=False)
+    row_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    scored_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     error: Mapped[str | None] = mapped_column(Text)

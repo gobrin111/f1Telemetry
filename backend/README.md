@@ -9,6 +9,7 @@ After installing the development dependencies from the repository README:
 
 ```bash
 f1-api
+f1-analyze 2024-round-01-race
 f1-features 2024-round-01-race
 f1-worker
 pytest
@@ -24,6 +25,10 @@ telemetry-file references are stored in PostgreSQL after each artifact import.
 `f1-features` reads a stored session and its Parquet telemetry, applies the
 versioned eligibility and historical normalization rules, and persists one
 feature row per lap. It is idempotent for an unchanged source and configuration.
+
+`f1-analyze` runs the robust statistical detector and Isolation Forest against
+the same completed feature run. It stores one result per lap with scores,
+severity, exclusions, and observed-versus-baseline explanations.
 
 Run migrations from this directory with:
 

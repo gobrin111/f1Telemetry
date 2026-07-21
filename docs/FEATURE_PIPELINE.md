@@ -2,7 +2,7 @@
 
 ## Version and scope
 
-Feature schema `lap-features-v1`, pipeline version `1.1.0`, converts every
+Feature schema `lap-features-v1`, pipeline version `1.2.0`, converts every
 stored race lap into either a complete numeric feature vector or one
 machine-readable exclusion reason. It uses only information available at or
 before the start of the current lap for weather alignment and only earlier
@@ -59,7 +59,9 @@ Telemetry is summarized per driver and lap from compressed Parquet files:
 These values are combined with lap and sector times, tire age, and air/track
 temperature. The stored ordered vector contains a historical robust z-score
 for every numeric feature. `feature_values` retains raw values, timing deltas,
-normalized values, and contextual flags for later explanations.
+normalized values, historical raw baselines and scales, and contextual flags
+for later explanations. Pipeline `1.2.0` added those explicit baselines without
+changing the ordered feature vector or feature schema.
 
 ## Versioned storage
 

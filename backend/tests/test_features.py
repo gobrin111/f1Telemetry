@@ -172,6 +172,8 @@ def test_eligibility_deltas_and_historical_normalization_are_reproducible() -> N
     assert bool(features.at[5, "eligible"]) is True
     assert features.at[5, "comparison_sample_count"] == 3
     assert features.at[5, "feature_values"]["deltas"]["lap_time_seconds_delta"] == 7
+    assert features.at[5, "feature_values"]["baselines"]["lap_time_seconds"] == 93
+    assert features.at[5, "feature_values"]["scales"]["lap_time_seconds"] > 0
     assert len(features.at[5, "feature_vector"]) == len(FEATURE_NAMES)
     assert features.at[6, "exclusion_reason"] == "yellow_flag_lap"
     assert features.at[7, "exclusion_reason"] == "deleted_lap"
