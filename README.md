@@ -72,14 +72,15 @@ npm test
 npm run build
 ```
 
-Run the worker scaffold after installing the backend:
+Run the import worker after installing the backend and starting PostgreSQL and
+Redis:
 
 ```bash
 .venv/bin/f1-worker
 ```
 
-It stays idle and exits cleanly on `Ctrl+C`. Queue transport and FastF1 jobs are
-introduced in later phases.
+It listens for FastF1 import jobs on the configured Redis queue and exits
+cleanly on `Ctrl+C`.
 
 ## Docker development environment
 
@@ -100,6 +101,7 @@ The stack includes:
 - `frontend`: Next.js development server with browser hot reload.
 - `api`: FastAPI development server with Python source reload.
 - `worker`: Redis Queue worker for FastF1 race-session imports.
+- `migrate`: one-shot Alembic migration run before the API and worker start.
 - `postgres`: PostgreSQL with a persistent named volume.
 - `redis`: Redis with append-only persistence in a named volume.
 
@@ -139,3 +141,22 @@ curl http://localhost:8000/api/v1/imports/import-2024-round-01-race
 Submitting the same race again returns the existing job or completed artifact
 instead of downloading duplicate data. To retry a failed job, submit the same
 request with `"retry_failed": true`.
+
+Successful imports normalize event, session, driver, result, lap, stint, and
+weather records into PostgreSQL. Driver telemetry remains in compressed
+Parquet files referenced from PostgreSQL. See the
+[storage architecture](docs/STORAGE.md) for the schema, artifact layout, and
+retry behavior.
+
+## Database migrations
+
+Docker Compose applies pending migrations automatically through the one-shot
+`migrate` service. To apply them manually from the repository:
+
+```bash
+cd backend
+../.venv/bin/alembic upgrade head
+```
+
+Create future schema changes with Alembic rather than calling SQLAlchemy's
+`create_all` in application code.

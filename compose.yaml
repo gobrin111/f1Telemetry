@@ -65,6 +65,17 @@ services:
       retries: 10
       start_period: 5s
 
+  migrate:
+    build:
+      context: ./backend
+      target: development
+    command: ["alembic", "upgrade", "head"]
+    environment: *backend-environment
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
   api:
     build:
       context: ./backend
@@ -78,6 +89,8 @@ services:
       - ./backend/src:/app/src:ro
       - fastf1_data:/data
     depends_on:
+      migrate:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       redis:
@@ -106,6 +119,8 @@ services:
       - ./backend/src:/app/src:ro
       - fastf1_data:/data
     depends_on:
+      migrate:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       redis:

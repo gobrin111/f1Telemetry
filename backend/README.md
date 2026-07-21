@@ -17,4 +17,11 @@ ruff format --check .
 
 The worker listens to the Redis `session-imports` queue and processes FastF1
 race-session imports. Imported Parquet artifacts and the FastF1 cache are stored
-under the configured data directory.
+under the configured data directory. Normalized session tables and portable
+telemetry-file references are stored in PostgreSQL after each artifact import.
+
+Run migrations from this directory with:
+
+```bash
+alembic upgrade head
+```

@@ -17,6 +17,10 @@ from f1_telemetry.ingestion.importer import (
     session_key,
 )
 from f1_telemetry.ingestion.models import SessionImportJob, SessionImportRequest
+from f1_telemetry.storage.persistence import (
+    is_session_persisted,
+    persist_session_artifacts,
+)
 
 
 class ImportJobNotFoundError(LookupError):
@@ -101,7 +105,11 @@ def enqueue_session_import(
         request.year,
         request.round_number,
     )
-    if artifact_manifest.is_file():
+    artifact_exists = artifact_manifest.is_file()
+    persistence_complete = artifact_exists and is_session_persisted(
+        settings.database_url, key
+    )
+    if persistence_complete:
         return _completed_artifact_response(
             job_id=job_id,
             year=request.year,
@@ -114,11 +122,15 @@ def enqueue_session_import(
     existing_job = queue.fetch_job(job_id)
     if existing_job is not None:
         status = existing_job.get_status(refresh=True)
-        if request.retry_failed and status in {
+        requires_database_backfill = (
+            status == JobStatus.FINISHED and not persistence_complete
+        )
+        retryable_failure = request.retry_failed and status in {
             JobStatus.FAILED,
             JobStatus.STOPPED,
             JobStatus.CANCELED,
-        }:
+        }
+        if requires_database_backfill or retryable_failure:
             existing_job.delete()
         else:
             return _job_response(existing_job)
@@ -167,15 +179,30 @@ def _update_current_job(progress: int, stage: str, message: str) -> None:
 
 
 def import_session_job(year: int, round_number: int) -> dict[str, Any]:
-    """RQ task that imports FastF1 data and records explainable progress."""
+    """RQ task that imports artifacts and persists normalized session data."""
     settings = get_settings()
+
+    def artifact_progress(progress: int, stage: str, message: str) -> None:
+        _update_current_job(round(progress * 0.9), stage, message)
+
     try:
         manifest = import_race_session(
             year=year,
             round_number=round_number,
             cache_dir=settings.fastf1_cache_dir,
             import_dir=settings.import_dir,
-            progress=_update_current_job,
+            progress=artifact_progress,
+        )
+        _update_current_job(
+            92,
+            "persisting",
+            "Loading normalized session data into PostgreSQL",
+        )
+        summary = persist_session_artifacts(
+            manifest=manifest,
+            import_dir=settings.import_dir,
+            database_url=settings.database_url,
+            job_id=_job_id(year, round_number),
         )
     except Exception as error:
         job = get_current_job()
@@ -192,9 +219,18 @@ def import_session_job(year: int, round_number: int) -> dict[str, Any]:
 
     job = get_current_job()
     if job is not None:
-        job.meta["artifact_key"] = manifest["session_key"]
+        job.meta.update(
+            {
+                "artifact_key": manifest["session_key"],
+                "progress": 100,
+                "stage": "complete",
+                "message": "Session import and database persistence completed",
+            }
+        )
         job.save_meta()
     return {
         "artifact_key": manifest["session_key"],
         "telemetry_rows": manifest["telemetry_rows"],
+        "session_id": summary.session_id,
+        "lap_rows": summary.laps,
     }

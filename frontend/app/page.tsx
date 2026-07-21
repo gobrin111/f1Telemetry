@@ -18,7 +18,7 @@ export default function Home() {
         </p>
         <div className="status" role="status">
           <span aria-hidden="true" />
-          Phase 5 · PostgreSQL storage
+          Phase 6 · Feature pipeline
         </div>
       </section>
 

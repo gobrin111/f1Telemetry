@@ -12,7 +12,8 @@ RUN useradd --create-home --uid 10001 appuser \
     && mkdir -p /data/fastf1-cache /data/imports \
     && chown -R appuser:appuser /data
 
-COPY pyproject.toml README.md ./
+COPY pyproject.toml README.md alembic.ini ./
+COPY migrations ./migrations
 COPY src ./src
 
 RUN python -m pip install --no-cache-dir .
