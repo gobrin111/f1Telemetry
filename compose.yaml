@@ -9,7 +9,12 @@ x-backend-environment: &backend-environment
   F1_WEB_ORIGIN: http://localhost:3000
   F1_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-f1telemetry}:${POSTGRES_PASSWORD:-f1telemetry_dev}@postgres:5432/${POSTGRES_DB:-f1telemetry}
   F1_REDIS_URL: redis://:${REDIS_PASSWORD:-redis_dev}@redis:6379/0
-  F1_WORKER_POLL_INTERVAL_SECONDS: 5
+  F1_DATA_DIR: /data
+  F1_FASTF1_CACHE_DIR: /data/fastf1-cache
+  F1_IMPORT_DIR: /data/imports
+  F1_IMPORT_QUEUE_NAME: session-imports
+  F1_IMPORT_JOB_TIMEOUT_SECONDS: 3600
+  F1_IMPORT_RESULT_TTL_SECONDS: 604800
 
 services:
   postgres:
@@ -71,6 +76,7 @@ services:
       - "127.0.0.1:${F1_API_PORT:-8000}:8000"
     volumes:
       - ./backend/src:/app/src:ro
+      - fastf1_data:/data
     depends_on:
       postgres:
         condition: service_healthy
@@ -98,6 +104,7 @@ services:
     environment: *backend-environment
     volumes:
       - ./backend/src:/app/src:ro
+      - fastf1_data:/data
     depends_on:
       postgres:
         condition: service_healthy
@@ -141,3 +148,4 @@ volumes:
   redis_data:
   frontend_node_modules:
   frontend_next:
+  fastf1_data:

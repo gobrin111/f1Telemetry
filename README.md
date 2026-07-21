@@ -99,7 +99,7 @@ The stack includes:
 
 - `frontend`: Next.js development server with browser hot reload.
 - `api`: FastAPI development server with Python source reload.
-- `worker`: Signal-aware worker scaffold for later import jobs.
+- `worker`: Redis Queue worker for FastF1 race-session imports.
 - `postgres`: PostgreSQL with a persistent named volume.
 - `redis`: Redis with append-only persistence in a named volume.
 
@@ -118,3 +118,24 @@ docker compose down
 
 The default credentials in `.env.example` are for local development only. Use
 different secrets before exposing or deploying any service.
+
+## Import a completed race
+
+Queue an import by year and round number:
+
+```bash
+curl -X POST http://localhost:8000/api/v1/imports \
+  -H 'Content-Type: application/json' \
+  -d '{"year": 2024, "round_number": 1}'
+```
+
+The response contains a deterministic job ID such as
+`import-2024-round-01-race`. Use it to check progress:
+
+```bash
+curl http://localhost:8000/api/v1/imports/import-2024-round-01-race
+```
+
+Submitting the same race again returns the existing job or completed artifact
+instead of downloading duplicate data. To retry a failed job, submit the same
+request with `"retry_failed": true`.

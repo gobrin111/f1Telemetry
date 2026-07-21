@@ -8,7 +8,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-RUN useradd --create-home --uid 10001 appuser
+RUN useradd --create-home --uid 10001 appuser \
+    && mkdir -p /data/fastf1-cache /data/imports \
+    && chown -R appuser:appuser /data
 
 COPY pyproject.toml README.md ./
 COPY src ./src

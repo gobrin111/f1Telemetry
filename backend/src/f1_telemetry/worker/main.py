@@ -1,34 +1,27 @@
-"""Signal-aware worker process scaffold."""
+"""Redis Queue worker process."""
 
 import logging
-import signal
-from threading import Event
-from types import FrameType
+
+from rq import Queue, Worker
 
 from f1_telemetry.core.config import get_settings
+from f1_telemetry.core.redis import create_redis_connection
 
 logger = logging.getLogger(__name__)
 
 
 def main() -> None:
-    """Run an idle worker until queue integration is added in a later phase."""
+    """Process FastF1 import jobs until the worker receives a stop signal."""
     settings = get_settings()
     logging.basicConfig(
         level=settings.log_level,
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
-    stop_requested = Event()
-
-    def request_stop(signum: int, _frame: FrameType | None) -> None:
-        logger.info("Worker received signal %s and is stopping", signum)
-        stop_requested.set()
-
-    signal.signal(signal.SIGINT, request_stop)
-    signal.signal(signal.SIGTERM, request_stop)
-
-    logger.info("Worker scaffold started; queue integration will be added in Phase 4")
-    while not stop_requested.wait(settings.worker_poll_interval_seconds):
-        logger.debug("Worker scaffold heartbeat")
+    connection = create_redis_connection(settings)
+    queue = Queue(settings.import_queue_name, connection=connection)
+    worker = Worker([queue], connection=connection)
+    logger.info("Worker listening on queue %s", settings.import_queue_name)
+    worker.work(logging_level=settings.log_level)
 
 
 if __name__ == "__main__":

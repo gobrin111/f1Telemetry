@@ -13,6 +13,8 @@ def test_default_settings_match_local_browser_workflow() -> None:
     assert settings.web_origin == "http://localhost:3000"
     assert settings.database_url.startswith("postgresql+psycopg://")
     assert settings.redis_url == "redis://:redis_dev@localhost:6379/0"
+    assert settings.fastf1_cache_dir.as_posix() == "data/fastf1-cache"
+    assert settings.import_queue_name == "session-imports"
 
 
 def test_invalid_api_port_is_rejected() -> None:

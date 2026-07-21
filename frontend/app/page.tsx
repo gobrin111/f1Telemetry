@@ -18,7 +18,7 @@ export default function Home() {
         </p>
         <div className="status" role="status">
           <span aria-hidden="true" />
-          Phase 4 · FastF1 data ingestion
+          Phase 5 · PostgreSQL storage
         </div>
       </section>
 

@@ -15,5 +15,6 @@ ruff check .
 ruff format --check .
 ```
 
-The worker is an idle, signal-aware process in Phase 2. Redis-backed job
-handling and FastF1 imports will be added in later phases.
+The worker listens to the Redis `session-imports` queue and processes FastF1
+race-session imports. Imported Parquet artifacts and the FastF1 cache are stored
+under the configured data directory.

@@ -1,6 +1,7 @@
 """Environment-backed application configuration."""
 
 from functools import lru_cache
+from pathlib import Path
 from typing import Literal
 
 from pydantic import Field
@@ -26,7 +27,12 @@ class Settings(BaseSettings):
         "postgresql+psycopg://f1telemetry:f1telemetry_dev@localhost:5432/f1telemetry"
     )
     redis_url: str = "redis://:redis_dev@localhost:6379/0"
-    worker_poll_interval_seconds: float = Field(default=5, gt=0, le=60)
+    data_dir: Path = Path("data")
+    fastf1_cache_dir: Path = Path("data/fastf1-cache")
+    import_dir: Path = Path("data/imports")
+    import_queue_name: str = "session-imports"
+    import_job_timeout_seconds: int = Field(default=3600, ge=60)
+    import_result_ttl_seconds: int = Field(default=604800, ge=3600)
 
 
 @lru_cache
