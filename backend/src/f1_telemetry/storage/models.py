@@ -87,6 +87,9 @@ class RaceSession(TimestampMixin, Base):
     telemetry_files: Mapped[list["TelemetryFile"]] = relationship(
         back_populates="session", cascade="all, delete-orphan"
     )
+    feature_runs: Mapped[list["FeatureRun"]] = relationship(
+        back_populates="session", cascade="all, delete-orphan"
+    )
     model_runs: Mapped[list["ModelRun"]] = relationship(
         back_populates="session", cascade="all, delete-orphan"
     )
@@ -146,6 +149,9 @@ class ImportRecord(TimestampMixin, Base):
     error: Mapped[str | None] = mapped_column(Text)
 
     session: Mapped[RaceSession] = relationship(back_populates="import_record")
+    feature_runs: Mapped[list["FeatureRun"]] = relationship(
+        back_populates="source_import"
+    )
 
 
 class Result(Base):
@@ -234,6 +240,9 @@ class Lap(Base):
     anomaly_results: Mapped[list["AnomalyResult"]] = relationship(
         back_populates="lap", cascade="all, delete-orphan"
     )
+    feature_rows: Mapped[list["LapFeature"]] = relationship(
+        back_populates="lap", cascade="all, delete-orphan"
+    )
 
 
 class Stint(Base):
@@ -320,6 +329,88 @@ class TelemetryFile(Base):
     driver: Mapped[Driver] = relationship(back_populates="telemetry_files")
 
 
+class FeatureRun(TimestampMixin, Base):
+    """One reproducible feature-pipeline execution for an imported session."""
+
+    __tablename__ = "feature_runs"
+    __table_args__ = (
+        UniqueConstraint(
+            "session_id",
+            "source_import_id",
+            "schema_version",
+            "config_hash",
+            name="feature_run_source_config",
+        ),
+        CheckConstraint(
+            "status IN ('running', 'completed', 'failed')",
+            name="valid_status",
+        ),
+        Index("ix_feature_runs_session_created", "session_id", "created_at"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    session_id: Mapped[int] = mapped_column(
+        ForeignKey("sessions.id", ondelete="CASCADE"), nullable=False
+    )
+    source_import_id: Mapped[int] = mapped_column(
+        ForeignKey("imports.id", ondelete="CASCADE"), nullable=False
+    )
+    schema_version: Mapped[str] = mapped_column(String(50), nullable=False)
+    pipeline_version: Mapped[str] = mapped_column(String(30), nullable=False)
+    config_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    parameters: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    feature_names: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False)
+    row_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    eligible_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    started_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    error: Mapped[str | None] = mapped_column(Text)
+
+    session: Mapped[RaceSession] = relationship(back_populates="feature_runs")
+    source_import: Mapped[ImportRecord] = relationship(back_populates="feature_runs")
+    lap_features: Mapped[list["LapFeature"]] = relationship(
+        back_populates="feature_run", cascade="all, delete-orphan"
+    )
+    model_runs: Mapped[list["ModelRun"]] = relationship(back_populates="feature_run")
+
+
+class LapFeature(TimestampMixin, Base):
+    """Versioned eligibility, context, and numeric vector for one lap."""
+
+    __tablename__ = "lap_features"
+    __table_args__ = (
+        UniqueConstraint("feature_run_id", "lap_id", name="lap_feature_run_lap"),
+        Index("ix_lap_features_run_eligible", "feature_run_id", "eligible"),
+        Index(
+            "ix_lap_features_run_exclusion",
+            "feature_run_id",
+            "exclusion_reason",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    feature_run_id: Mapped[int] = mapped_column(
+        ForeignKey("feature_runs.id", ondelete="CASCADE"), nullable=False
+    )
+    lap_id: Mapped[int] = mapped_column(
+        ForeignKey("laps.id", ondelete="CASCADE"), nullable=False
+    )
+    eligible: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    exclusion_reason: Mapped[str | None] = mapped_column(String(100))
+    comparison_group: Mapped[str] = mapped_column(String(200), nullable=False)
+    comparison_sample_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    is_wet: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    weather_changed_recently: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    feature_values: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    feature_vector: Mapped[list[float] | None] = mapped_column(JSON)
+
+    feature_run: Mapped[FeatureRun] = relationship(back_populates="lap_features")
+    lap: Mapped[Lap] = relationship(back_populates="feature_rows")
+
+
 class ModelRun(TimestampMixin, Base):
     """A versioned feature/model execution for one session."""
 
@@ -336,6 +427,9 @@ class ModelRun(TimestampMixin, Base):
     session_id: Mapped[int] = mapped_column(
         ForeignKey("sessions.id", ondelete="CASCADE"), nullable=False
     )
+    feature_run_id: Mapped[int | None] = mapped_column(
+        ForeignKey("feature_runs.id", ondelete="RESTRICT"), index=True
+    )
     job_id: Mapped[str | None] = mapped_column(String(120), unique=True)
     model_name: Mapped[str] = mapped_column(String(100), nullable=False)
     model_version: Mapped[str] = mapped_column(String(50), nullable=False)
@@ -347,6 +441,7 @@ class ModelRun(TimestampMixin, Base):
     error: Mapped[str | None] = mapped_column(Text)
 
     session: Mapped[RaceSession] = relationship(back_populates="model_runs")
+    feature_run: Mapped[FeatureRun | None] = relationship(back_populates="model_runs")
     anomaly_results: Mapped[list["AnomalyResult"]] = relationship(
         back_populates="model_run", cascade="all, delete-orphan"
     )

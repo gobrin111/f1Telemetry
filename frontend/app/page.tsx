@@ -18,7 +18,7 @@ export default function Home() {
         </p>
         <div className="status" role="status">
           <span aria-hidden="true" />
-          Phase 6 · Feature pipeline
+          Phase 7 · Anomaly detection
         </div>
       </section>
 

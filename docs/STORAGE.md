@@ -21,6 +21,9 @@ The initial migration creates these groups of tables:
   location, row counts, job ID, and completion time for each session.
 - `telemetry_files` references one compressed Parquet file per session driver,
   including its relative path, row count, byte size, and SHA-256 checksum.
+- `feature_runs` and `lap_features` preserve the exact imported source,
+  pipeline configuration, ordered vector schema, eligibility decision, and
+  contextual feature values used for each lap.
 - `model_runs` and `anomaly_results` reserve the versioned, traceable storage
   needed by Phases 6 and 7 without choosing a model implementation early.
 

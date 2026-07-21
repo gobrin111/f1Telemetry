@@ -160,3 +160,20 @@ cd backend
 
 Create future schema changes with Alembic rather than calling SQLAlchemy's
 `create_all` in application code.
+
+## Build lap features
+
+After a session import is complete, build its versioned lap feature set:
+
+```bash
+docker compose exec worker f1-features 2024-round-01-race
+```
+
+The command stores one eligibility decision for every lap and a complete
+historical feature vector for every eligible lap. Repeating the command returns
+the existing run when its source import and configuration are unchanged. Use
+`--force` only when intentionally rebuilding that same version.
+
+The eligibility order, comparison groups, weather alignment, and feature
+definitions are documented in the
+[lap feature pipeline](docs/FEATURE_PIPELINE.md).

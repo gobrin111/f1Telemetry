@@ -12,6 +12,7 @@ dependencies = [
     "alembic==1.18.5",
     "fastapi==0.139.2",
     "fastf1==3.8.3",
+    "numpy==2.5.1",
     "pandas==2.3.3",
     "pyarrow==25.0.0",
     "psycopg[binary]==3.3.4",
@@ -32,6 +33,7 @@ dev = [
 
 [project.scripts]
 f1-api = "f1_telemetry.api.main:run"
+f1-features = "f1_telemetry.features.cli:main"
 f1-worker = "f1_telemetry.worker.main:main"
 
 [tool.setuptools.packages.find]
